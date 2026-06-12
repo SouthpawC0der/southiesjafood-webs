@@ -1,26 +1,234 @@
 @import "tailwindcss";
 
+/* ════════════════════════════════════════════════════════════════════════════
+   SOUTHIE'S JA FOODS — "Island Block" Design System
+   Style: Vibrant & Block-based · Jamaican flag palette · Bebas Neue + Source Sans 3
+   ════════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Jamaican palette */
+  --green:      #007A3D;
+  --green-deep: #005C2E;
+  --green-pop:  #009B3A;
+
+  --gold:       #FFCE00;
+  --gold-deep:  #E0B400;
+
+  --ink:        #121212;
+  --ink-soft:   #1E1E1C;
+
+  /* Neutrals */
+  --paper:      #FAF6EE;
+  --cream:      #F3EDDF;
+  --white:      #FFFFFF;
+
+  /* Text */
+  --text:       #141414;
+  --muted:      #57544C;
+  --faint:      #8A8779;
+
+  /* Structure */
+  --line:       #141414;
+  --line-soft:  rgba(20, 20, 20, 0.12);
+
+  /* Block shadows (hard offset — signature of the style) */
+  --block-sm:   3px 3px 0 var(--ink);
+  --block:      6px 6px 0 var(--ink);
+  --block-lg:   10px 10px 0 var(--ink);
+  --block-gold: 6px 6px 0 var(--gold);
+  --block-green: 6px 6px 0 var(--green);
+
+  /* Legacy aliases — secondary pages (checkout, account, auth, about, privacy)
+     still reference these; mapped onto the current palette */
+  --c-bg:            var(--paper);
+  --c-surface:       var(--white);
+  --c-surface-alt:   var(--cream);
+  --c-card:          var(--white);
+  --c-dark:          var(--ink);
+  --c-dark-deep:     var(--ink);
+  --c-text:          var(--text);
+  --c-muted:         var(--muted);
+  --c-muted-light:   var(--faint);
+  --c-green:         var(--green);
+  --c-green-mid:     var(--green-pop);
+  --c-green-bright:  var(--green-pop);
+  --c-gold:          var(--gold);
+  --c-gold-dark:     var(--gold-deep);
+  --c-gold-on-dark:  var(--gold);
+  --c-border:        var(--line-soft);
+  --c-border-strong: rgba(20, 20, 20, 0.25);
+  --c-outline:       var(--line-soft);
+  --ja-dark:         var(--ink);
+  --ja-black:        var(--ink);
+  --ja-card:         var(--ink-soft);
+  --ja-white:        var(--white);
+  --ja-gray:         var(--faint);
+  --ja-gold:         var(--gold);
+  --ja-gold-dark:    var(--gold-deep);
+  --ja-green:        var(--green);
+  --ja-green-light:  var(--green-pop);
+  --ja-border:       rgba(255, 255, 255, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--paper);
+  --color-foreground: var(--text);
+  --font-display: var(--font-bebas), "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-sans:    var(--font-source), "Source Sans 3", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-source), "Source Sans 3", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--gold); color: var(--ink); }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { background: var(--ink); }
+
+/* ── Focus ────────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 2px;
+}
+
+/* ── Display type ─────────────────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-bebas), "Bebas Neue", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* ── Block components ─────────────────────────────────────────────────────── */
+
+/* Card: hard border + offset shadow, presses down on hover */
+.block-card {
+  background: var(--white);
+  border: 2px solid var(--ink);
+  box-shadow: var(--block);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.block-card:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* Buttons */
+.btn-block {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px solid var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 16px 32px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+  user-select: none;
+}
+.btn-block:hover  { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+.btn-block:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+
+.btn-gold  { background: var(--gold);  color: var(--ink); }
+.btn-gold:hover  { background: var(--gold-deep); }
+.btn-green { background: var(--green); color: var(--white); }
+.btn-green:hover { background: var(--green-deep); }
+.btn-white { background: var(--white); color: var(--ink); }
+.btn-white:hover { background: var(--cream); }
+
+/* On-dark variant: shadow flips to gold */
+.btn-on-dark { box-shadow: 4px 4px 0 var(--gold); border-color: var(--gold); }
+.btn-on-dark:hover  { box-shadow: 2px 2px 0 var(--gold); }
+.btn-on-dark:active { box-shadow: 0 0 0 var(--gold); }
+
+/* Tag chip */
+.chip {
+  display: inline-block;
+  border: 2px solid var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  line-height: 1.5;
+}
+.chip-gold  { background: var(--gold);  color: var(--ink); }
+.chip-green { background: var(--green); color: var(--white); }
+.chip-white { background: var(--white); color: var(--ink); }
+
+/* Section kicker label */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.kicker::before {
+  content: "";
+  width: 32px;
+  height: 8px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Jamaica flag stripe */
+.ja-stripe {
+  height: 8px;
+  background: linear-gradient(
+    to right,
+    var(--green) 0 33.33%,
+    var(--gold) 33.33% 66.66%,
+    var(--ink) 66.66% 100%
+  );
+}
+
+/* Scrolling marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Legacy: auth pages background */
+.island-gradient {
+  background:
+    radial-gradient(circle at top right, rgba(255, 206, 0, 0.18) 0%, transparent 55%),
+    radial-gradient(circle at bottom left, rgba(0, 122, 61, 0.08) 0%, transparent 55%),
+    var(--paper);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .marquee-track { animation: none; }
 }

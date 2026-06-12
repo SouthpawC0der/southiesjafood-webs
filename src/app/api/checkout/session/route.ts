@@ -1,0 +1,93 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { getStripe } from "@/lib/stripe";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { menuItems } from "@/lib/menu-data";
+
+type CartItemPayload = {
+  id: string;
+  quantity: number;
+};
+
+const MAX_QUANTITY_PER_ITEM = 20;
+const MAX_CART_ITEMS = 30;
+
+export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed } = checkRateLimit(`checkout:${ip}`);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  }
+
+  // ── Authorization: verified Clerk session, never client-supplied IDs ──────
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "You must be signed in to checkout." }, { status: 401 });
+  }
+  const user = await currentUser();
+  const email = user?.emailAddresses[0]?.emailAddress;
+
+  try {
+    const body = await req.json();
+    const rawItems: CartItemPayload[] = body.items ?? [];
+    const specialInstructions = String(body.specialInstructions ?? "").slice(0, 500);
+
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+    }
+    if (rawItems.length > MAX_CART_ITEMS) {
+      return NextResponse.json({ error: "Too many items in cart." }, { status: 400 });
+    }
+
+    // ── Server-side price validation — never trust client prices ────────────
+    const validatedItems = rawItems.map((item) => {
+      const canonical = menuItems.find((m) => m.id === item.id);
+      if (!canonical) throw new Error(`Unknown item: ${item.id}`);
+
+      const quantity = Math.min(Math.max(1, Math.floor(item.quantity)), MAX_QUANTITY_PER_ITEM);
+
+      return {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: canonical.name,
+            description: canonical.description.slice(0, 200),
+            images: [canonical.image],
+          },
+          unit_amount: canonical.price, // server price, not client price
+        },
+        quantity,
+      };
+    });
+
+    // Compact item summary for the webhook to persist (id:qty pairs)
+    const itemSummary = rawItems
+      .map((i) => `${i.id}:${Math.min(Math.max(1, Math.floor(i.quantity)), MAX_QUANTITY_PER_ITEM)}`)
+      .join(",");
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+    const session = await getStripe().checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: validatedItems,
+      mode: "payment",
+      customer_email: email,
+      success_url: `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/checkout`,
+      metadata: {
+        clerkUserId: userId,           // ties the payment to the account
+        items: itemSummary,            // webhook re-derives prices server-side
+        specialInstructions: specialInstructions || "None",
+        orderType: "to-go",
+      },
+      payment_intent_data: {
+        description: "Southie's Ja Foods — To-Go Order",
+      },
+    });
+
+    return NextResponse.json({ url: session.url });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Checkout failed.";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+}
