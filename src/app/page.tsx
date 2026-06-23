@@ -40,15 +40,15 @@ export default function HomePage() {
   return (
     <>
       {/* ═══ HERO ═══════════════════════════════════════════════════════════ */}
-      <section className="bg-[var(--paper)] pt-[76px] border-b-2 border-[var(--ink)]">
-        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center py-16 lg:py-24">
+      <section className="bg-[var(--paper)] pt-[92px] border-b-2 border-[var(--ink)]">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center py-12 lg:py-20">
 
           {/* Copy */}
           <div className="lg:col-span-7">
             <span className="kicker text-[var(--green)] mb-6 block">Charlotte, NC · Est. with island roots</span>
 
-            <h1 className="font-display text-[var(--ink)] leading-[0.92] mb-7"
-                style={{ fontSize: "clamp(4rem, 9.5vw, 8.5rem)" }}>
+            <h1 className="font-display text-[var(--ink)] leading-[0.9] mb-7"
+                style={{ fontSize: "clamp(3rem, 5.5vw, 5.5rem)" }}>
               Real Jamaican.
               <br />
               <span className="text-[var(--green)]">Big Flavor.</span>
@@ -210,11 +210,11 @@ export default function HomePage() {
         />
         <div className="relative max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-20 lg:py-28 text-center">
           <span className="kicker text-[var(--gold)] mb-5 inline-flex">Catering &amp; Events</span>
-          <h2 className="font-display text-white leading-[0.92] mb-6 mx-auto max-w-3xl"
-              style={{ fontSize: "clamp(3rem, 7vw, 6rem)" }}>
+          <h2 className="font-display text-white leading-[0.92] text-center mb-6 mx-auto max-w-2xl"
+              style={{ fontSize: "clamp(2.5rem, 4.5vw, 4.5rem)" }}>
             Bring the Island to Your Event
           </h2>
-          <p className="text-white/75 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
+          <p className="text-white/75 text-lg max-w-xl mx-auto mb-10 leading-relaxed text-center">
             Corporate lunches, weddings, family reunions — we handle the food so you can handle the vibes. Quotes within 24 hours.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
