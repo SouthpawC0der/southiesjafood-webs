@@ -50,7 +50,7 @@ export default function MenuPage() {
 
       {/* ═══ Header ═════════════════════════════════════════════════════════ */}
       <section className="bg-[var(--ink)] border-b-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-16 lg:py-20">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-16 lg:py-20">
           <span className="kicker text-[var(--gold)] mb-5 block">The Full Lineup</span>
           <h1 className="font-display text-white leading-[0.92]"
               style={{ fontSize: "clamp(3.5rem, 8vw, 7rem)" }}>
@@ -64,7 +64,7 @@ export default function MenuPage() {
 
       {/* ═══ Filter bar (sticky) ════════════════════════════════════════════ */}
       <div className="sticky top-[76px] z-40 bg-[var(--paper)] border-b-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20">
           <div className="flex gap-3 py-4 overflow-x-auto no-scrollbar" role="tablist" aria-label="Menu categories">
             {FILTERS.map(({ id, label }) => (
               <button
@@ -87,7 +87,7 @@ export default function MenuPage() {
       </div>
 
       {/* ═══ Grid ═══════════════════════════════════════════════════════════ */}
-      <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-12 lg:py-16">
+      <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-12 lg:py-16">
         <p className="text-[var(--faint)] text-sm font-bold uppercase tracking-wider mb-8">
           {visible.length} {visible.length === 1 ? "dish" : "dishes"}
         </p>
@@ -105,7 +105,7 @@ export default function MenuPage() {
 
       {/* ═══ Catering banner ════════════════════════════════════════════════ */}
       <section className="bg-[var(--gold)] border-t-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <h2 className="font-display text-4xl text-[var(--ink)] leading-none mb-2">
               Feeding a crowd?

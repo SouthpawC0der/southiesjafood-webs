@@ -37,7 +37,7 @@ export default function ContactPage() {
 
       {/* ═══ Header ═════════════════════════════════════════════════════════ */}
       <section className="bg-[var(--ink)] border-b-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-16 lg:py-20">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-16 lg:py-20">
           <span className="kicker text-[var(--gold)] mb-5 block">Catering &amp; Events</span>
           <h1 className="font-display text-white leading-[0.92]"
               style={{ fontSize: "clamp(3.5rem, 8vw, 7rem)" }}>
@@ -50,7 +50,7 @@ export default function ContactPage() {
       </section>
 
       {/* ═══ Body ═══════════════════════════════════════════════════════════ */}
-      <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-14 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-14 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-10">
 
         {/* ── Info column ───────────────────────────────────────────────── */}
         <div className="lg:col-span-4 space-y-6">

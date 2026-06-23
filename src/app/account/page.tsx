@@ -37,7 +37,7 @@ export default async function AccountPage() {
 
       {/* ═══ Header ═════════════════════════════════════════════════════════ */}
       <section className="bg-[var(--ink)] border-b-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-14 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-14 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <span className="kicker text-[var(--gold)] mb-4 block">My Account</span>
             <h1 className="font-display text-white leading-[0.92]"
@@ -55,7 +55,7 @@ export default async function AccountPage() {
       </section>
 
       {/* ═══ Orders ═════════════════════════════════════════════════════════ */}
-      <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-14">
+      <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-14">
         <h2 className="font-display text-4xl text-[var(--ink)] mb-8">Order History</h2>
 
         {dbError ? (

@@ -20,7 +20,7 @@ export function Footer() {
       {/* Flag stripe */}
       <div className="ja-stripe" />
 
-      <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-16 grid grid-cols-1 md:grid-cols-12 gap-10">
+      <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-16 grid grid-cols-1 md:grid-cols-12 gap-10">
 
         {/* Brand */}
         <div className="md:col-span-5">
@@ -83,7 +83,7 @@ export function Footer() {
 
       {/* Bottom */}
       <div className="border-t border-white/10">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-5 flex flex-col sm:flex-row justify-between gap-2">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-5 flex flex-col sm:flex-row justify-between gap-2">
           <p className="text-white/35 text-xs font-semibold">
             © {new Date().getFullYear()} Southie&apos;s Ja Foods — All rights reserved
           </p>

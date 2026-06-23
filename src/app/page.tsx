@@ -41,7 +41,7 @@ export default function HomePage() {
     <>
       {/* ═══ HERO ═══════════════════════════════════════════════════════════ */}
       <section className="bg-[var(--paper)] pt-[76px] border-b-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center py-14 lg:py-20">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center py-16 lg:py-24">
 
           {/* Copy */}
           <div className="lg:col-span-7">
@@ -106,7 +106,7 @@ export default function HomePage() {
 
       {/* ═══ SIGNATURE DISHES ═══════════════════════════════════════════════ */}
       <section className="py-20 lg:py-28 bg-[var(--paper)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20">
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-12">
             <div>
@@ -131,7 +131,7 @@ export default function HomePage() {
 
       {/* ═══ SERVICES ═══════════════════════════════════════════════════════ */}
       <section className="py-20 lg:py-28 bg-[var(--cream)] border-y-2 border-[var(--ink)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20">
           <div className="text-center mb-14">
             <span className="kicker text-[var(--green)] mb-4 inline-flex">How We Feed You</span>
             <h2 className="font-display text-[var(--ink)] leading-[0.95]"
@@ -159,7 +159,7 @@ export default function HomePage() {
 
       {/* ═══ STORY STRIP ════════════════════════════════════════════════════ */}
       <section className="py-20 lg:py-28 bg-[var(--paper)]">
-        <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* Image pair */}
           <div className="relative pr-8 pb-8">
@@ -208,7 +208,7 @@ export default function HomePage() {
             backgroundSize: "28px 28px",
           }}
         />
-        <div className="relative max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 py-20 lg:py-28 text-center">
+        <div className="relative max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-20 lg:py-28 text-center">
           <span className="kicker text-[var(--gold)] mb-5 inline-flex">Catering &amp; Events</span>
           <h2 className="font-display text-white leading-[0.92] mb-6 mx-auto max-w-3xl"
               style={{ fontSize: "clamp(3rem, 7vw, 6rem)" }}>

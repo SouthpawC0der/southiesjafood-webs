@@ -30,7 +30,7 @@ export function Navbar() {
         <div className="ja-stripe" />
 
         <div className="bg-[var(--paper)] border-b-2 border-[var(--ink)]">
-          <div className="max-w-[1320px] mx-auto px-8 sm:px-12 lg:px-20 h-[68px] flex items-center justify-between gap-4">
+          <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 h-[68px] flex items-center justify-between gap-4">
 
             {/* Logo */}
             <Link href="/" className="font-display text-[28px] leading-none text-[var(--ink)] tracking-wide shrink-0">
