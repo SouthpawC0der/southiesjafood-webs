@@ -10,7 +10,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   // ── Rate limiting on API routes ──────────────────────────────────────────
   if (pathname.startsWith("/api/")) {
     const ip = getClientIp(request);
-    const { allowed, remaining, resetIn } = checkRateLimit(ip);
+    const { allowed, remaining, resetIn } = await checkRateLimit(ip);
     if (!allowed) {
       return new NextResponse(
         JSON.stringify({ error: "Too many requests. Please slow down." }),

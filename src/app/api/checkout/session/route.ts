@@ -14,7 +14,7 @@ const MAX_CART_ITEMS = 30;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed } = checkRateLimit(`checkout:${ip}`);
+  const { allowed } = await checkRateLimit(`checkout:${ip}`);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     // ── Server-side price validation — never trust client prices ────────────
     const validatedItems = rawItems.map((item) => {
       const canonical = menuItems.find((m) => m.id === item.id);
-      if (!canonical) throw new Error(`Unknown item: ${item.id}`);
+      if (!canonical) throw new Error("invalid-item");
 
       const quantity = Math.min(Math.max(1, Math.floor(item.quantity)), MAX_QUANTITY_PER_ITEM);
 
@@ -87,7 +87,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Checkout failed.";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    const isKnown = err instanceof Error && err.message === "invalid-item";
+    console.error("[checkout] session error:", err);
+    return NextResponse.json(
+      { error: isKnown ? "Your cart contains an invalid item." : "Checkout failed. Please try again." },
+      { status: 400 }
+    );
   }
 }

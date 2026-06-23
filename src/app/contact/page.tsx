@@ -16,6 +16,7 @@ const EVENT_TYPES = [
 export default function ContactPage() {
   const [loading, setLoading] = useState(false);
   const [sent,    setSent]    = useState(false);
+  const [error,   setError]   = useState("");
   const [form, setForm] = useState({
     name: "", email: "", phone: "", eventType: "", date: "", guests: "", message: "",
   });
@@ -27,9 +28,21 @@ export default function ContactPage() {
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSent(true);
-    setLoading(false);
+    setError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -176,6 +189,12 @@ export default function ContactPage() {
                   className={`${inp} resize-none`}
                 />
               </Field>
+
+              {error && (
+                <p className="border-2 border-red-600 bg-red-50 text-red-700 text-sm font-semibold px-4 py-3">
+                  {error}
+                </p>
+              )}
 
               <button type="submit" disabled={loading} className="btn-block btn-green w-full disabled:opacity-60">
                 {loading
