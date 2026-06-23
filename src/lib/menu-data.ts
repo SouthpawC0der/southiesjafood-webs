@@ -36,7 +36,7 @@ const jerkItems: MenuItem[] = [
     price: 1895,
     section: "classics",
     category: "jerk",
-    image: "https://images.unsplash.com/photo-1544025162-d76538974e7c?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&q=80",
     spicy: true,
   },
   {
@@ -57,7 +57,7 @@ const jerkItems: MenuItem[] = [
     price: 2195,
     section: "classics",
     category: "jerk",
-    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=800&q=80",
     spicy: true,
   },
 ];
@@ -121,7 +121,7 @@ const stewItems: MenuItem[] = [
     price: 1795,
     section: "classics",
     category: "stews",
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1624726175512-19b9baf9fbd1?w=800&q=80",
     popular: true,
   },
   {
@@ -142,7 +142,7 @@ const stewItems: MenuItem[] = [
     price: 1895,
     section: "classics",
     category: "stews",
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1534482421-64566f976cfa?w=800&q=80",
     tag: "National Dish",
   },
 ];
@@ -177,7 +177,7 @@ const modernItems: MenuItem[] = [
     description: "Penne in a creamy jerk-infused Alfredo sauce with bell peppers, onions, and fresh herbs. Choose your protein: Chicken, Shrimp, or Pork.",
     price: 1695,
     section: "modern",
-    image: "https://images.unsplash.com/photo-1551183053-bf91798d792b?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=800&q=80",
     proteinOptions: ["Chicken", "Shrimp (+$2)", "Pork"],
     tag: "Customer Fave",
   },

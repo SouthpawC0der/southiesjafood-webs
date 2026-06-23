@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ShoppingBag, Menu, X, UserRound } from "lucide-react";
@@ -33,8 +34,15 @@ export function Navbar() {
           <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 h-[68px] flex items-center justify-between gap-4">
 
             {/* Logo */}
-            <Link href="/" className="font-display text-[28px] leading-none text-[var(--ink)] tracking-wide shrink-0">
-              SOUTHIE&apos;S<span className="text-[var(--green)]"> JA</span>
+            <Link href="/" aria-label="Southie's Ja Foods home" className="shrink-0">
+              <Image
+                src="/icon.png"
+                alt="Southie's Ja Foods"
+                width={48}
+                height={48}
+                className="h-12 w-12 block rounded-full"
+                priority
+              />
             </Link>
 
             {/* Desktop nav */}

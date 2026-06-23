@@ -91,6 +91,11 @@ export function Footer() {
             Out of many, one flavor.
           </p>
         </div>
+        <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 pb-5 text-center">
+          <p className="text-white/25 text-xs font-semibold">
+            Developed by Enitades
+          </p>
+        </div>
       </div>
     </footer>
   );

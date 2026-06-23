@@ -78,7 +78,11 @@
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Must live in @layer base so @layer utilities (Tailwind classes like px-8, mx-auto)
+   can override it — unlayered styles beat layered ones regardless of specificity. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 
 html { scroll-behavior: smooth; }
 
