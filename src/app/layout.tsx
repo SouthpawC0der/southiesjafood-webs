@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { Toaster } from "@/components/ui/Toaster";
+import { AnnouncementPopup } from "@/components/ui/AnnouncementPopup";
 
 const bebas = Bebas_Neue({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main>{children}</main>
             <Footer />
             <Toaster />
+            <AnnouncementPopup />
           </CartProvider>
         </body>
       </html>
