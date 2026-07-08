@@ -78,14 +78,14 @@ export default function HomePage() {
             <div className="border-2 border-[var(--ink)] shadow-[10px_10px_0_var(--green)] overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=1000&q=85"
-                alt="Pimento-smoked jerk chicken with rice and peas"
+                src="/images/oxtail.jpeg"
+                alt="Slow-braised oxtail with butter beans and white rice"
                 className="w-full aspect-[4/5] object-cover"
               />
             </div>
             {/* Floating price block */}
             <div className="absolute -bottom-5 -left-5 bg-[var(--gold)] border-2 border-[var(--ink)] shadow-[5px_5px_0_var(--ink)] px-5 py-3">
-              <p className="font-display text-2xl leading-none">500+ EVENTS</p>
+              <p className="font-display text-2xl leading-none">100+ EVENTS</p>
               <p className="text-[11px] font-bold uppercase tracking-wider mt-1">Catered &amp; Counting</p>
             </div>
           </div>
