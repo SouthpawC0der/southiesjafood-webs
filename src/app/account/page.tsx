@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { SignOutButton } from "@clerk/nextjs";
-import { Package, LogOut, ArrowRight, Star, TrendingUp } from "lucide-react";
+import { Package, LogOut, ArrowRight, Star, TrendingUp, UserCog } from "lucide-react";
 import { getOrdersForUser, type OrderStatus, type OrderWithItems } from "@/db";
 import { getLoyaltyAccount, getLoyaltyTransactions, type LoyaltyTransaction } from "@/db/loyalty";
 import { formatPrice } from "@/lib/menu-data";
 import { getTier, getNextTier, tierProgress, pointsToCents } from "@/lib/loyalty-config";
+import { ProfileSettings } from "@/components/auth/ProfileSettings";
 
 export const metadata = { title: "My Account | Southie's Ja Foods" };
 export const dynamic  = "force-dynamic";
@@ -70,6 +71,15 @@ export default async function AccountPage() {
       </section>
 
       <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-14 space-y-14">
+
+        {/* ═══ Profile Settings ════════════════════════════════════════════════ */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <UserCog size={20} className="text-[var(--green)]" />
+            <h2 className="font-display text-4xl text-[var(--ink)]">Profile Settings</h2>
+          </div>
+          <ProfileSettings />
+        </section>
 
         {/* ═══ Loyalty Card ═════════════════════════════════════════════════════ */}
         <section>
