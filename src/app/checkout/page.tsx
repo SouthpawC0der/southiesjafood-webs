@@ -1,54 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShoppingBag, Trash2, CalendarDays } from "lucide-react";
+import { Loader2, ShoppingBag, Trash2, CalendarDays, Star } from "lucide-react";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
+import {
+  MIN_REDEEM, maxRedeemable, pointsToCents,
+} from "@/lib/loyalty-config";
 
-// Returns "YYYY-MM-DD" for today (ET) if before noon, otherwise tomorrow.
-function getDefaultOrderDate(): string {
-  const et = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
-  );
-  if (et.getHours() >= 12) et.setDate(et.getDate() + 1);
-  // Format as YYYY-MM-DD in local (ET) terms
+// ── Date helpers (Eastern Time) ───────────────────────────────────────────────
+function etDate(offsetDays = 0): string {
+  const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  et.setDate(et.getDate() + offsetDays);
   const y = et.getFullYear();
   const m = String(et.getMonth() + 1).padStart(2, "0");
   const d = String(et.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
-function getMinDate(): string {
-  return getDefaultOrderDate();
+function getMinDate() {
+  const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  return etDate(et.getHours() >= 12 ? 1 : 0);
 }
 
-function getMaxDate(): string {
-  const et = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
-  );
-  et.setDate(et.getDate() + 60);
-  const y = et.getFullYear();
-  const m = String(et.getMonth() + 1).padStart(2, "0");
-  const d = String(et.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+// ── Preset redemption options ─────────────────────────────────────────────────
+const PRESETS = [500, 1000, 1500, 2000]; // points
+
+type LoyaltyData = { balance: number; tier: string } | null;
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, removeItem } = useCartStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [orderDate, setOrderDate] = useState(getDefaultOrderDate);
+  const [orderDate, setOrderDate] = useState(getMinDate);
+  const [loyalty,  setLoyalty]  = useState<LoyaltyData>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
 
-  const isSameDay = orderDate === getMinDate();
+  useEffect(() => {
+    fetch("/api/loyalty/balance")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => d && setLoyalty({ balance: d.balance, tier: d.tier }))
+      .catch(() => {/* not fatal */});
+  }, []);
 
   async function handleCheckout() {
     if (items.length === 0 || !orderDate) return;
     setLoading(true);
     setError("");
-
     try {
       const res = await fetch("/api/checkout/session", {
         method: "POST",
@@ -58,12 +59,11 @@ export default function CheckoutPage() {
           specialInstructions,
           orderType: "pickup",
           orderDate,
+          pointsToRedeem,
         }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Checkout failed.");
-
       window.location.href = data.url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -86,9 +86,16 @@ export default function CheckoutPage() {
     );
   }
 
-  const subtotal = total();
-  const tax = Math.round(subtotal * 0.0875);
-  const grandTotal = subtotal + tax;
+  const subtotal     = total();
+  const tax          = Math.round(subtotal * 0.0875);
+  const discountCents = pointsToCents(pointsToRedeem);
+  const grandTotal   = Math.max(0, subtotal + tax - discountCents);
+  const isSameDay    = orderDate === getMinDate();
+
+  // Compute which preset buttons are available
+  const maxPts = loyalty ? maxRedeemable(loyalty.balance, subtotal) : 0;
+  const availablePresets = PRESETS.filter((p) => p <= maxPts && p >= MIN_REDEEM);
+  const showRewards = loyalty !== null && loyalty.balance >= MIN_REDEEM;
 
   return (
     <div className="max-w-4xl mx-auto px-6 pt-32 pb-24">
@@ -97,20 +104,17 @@ export default function CheckoutPage() {
       </h1>
 
       <div className="grid md:grid-cols-[1fr_360px] gap-8">
-        {/* Left column */}
+        {/* ── Left column ── */}
         <div className="space-y-4">
-          {/* Items */}
+
+          {/* Cart items */}
           {items.map((item) => (
-            <div
-              key={item.id}
+            <div key={item.id}
               className="flex gap-4 bg-[var(--ja-card)] rounded-2xl p-4 border border-[var(--ja-border)]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-20 h-20 rounded-xl object-cover shrink-0"
-              />
+              <img src={item.image} alt={item.name}
+                className="w-20 h-20 rounded-xl object-cover shrink-0" />
               <div className="flex-1">
                 <p className="text-[var(--ja-white)] font-bold">{item.name}</p>
                 <p className="text-[var(--ja-gray)] text-sm mt-0.5">Qty: {item.quantity}</p>
@@ -118,14 +122,70 @@ export default function CheckoutPage() {
                   {formatPrice(item.price * item.quantity)}
                 </p>
               </div>
-              <button
-                onClick={() => removeItem(item.id)}
-                className="text-[var(--ja-gray)] hover:text-red-400 transition-colors self-start"
-              >
+              <button onClick={() => removeItem(item.id)}
+                className="text-[var(--ja-gray)] hover:text-red-400 transition-colors self-start">
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
+
+          {/* Rewards redemption */}
+          {showRewards && (
+            <div className="bg-[var(--ja-card)] rounded-2xl border border-[var(--ja-border)] p-5">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <Star size={16} className="text-[var(--ja-gold)]" fill="currentColor" />
+                  <span className="text-sm font-bold text-[var(--ja-white)]">
+                    Rewards — {loyalty!.tier} Member
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-[var(--ja-gold)]">
+                  {loyalty!.balance.toLocaleString()} pts
+                  {" "}(${(loyalty!.balance / 100).toFixed(2)} value)
+                </span>
+              </div>
+              <p className="text-xs text-[var(--ja-gray)] mb-3">
+                100 pts = $1 off. Select an amount to apply:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setPointsToRedeem(0)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
+                    pointsToRedeem === 0
+                      ? "bg-[var(--ja-gold)] border-[var(--ja-gold)] text-[var(--ja-black)]"
+                      : "border-[var(--ja-border)] text-[var(--ja-gray)] hover:border-[var(--ja-gold)]/50"
+                  }`}
+                >
+                  None
+                </button>
+                {availablePresets.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPointsToRedeem(p)}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
+                      pointsToRedeem === p
+                        ? "bg-[var(--ja-gold)] border-[var(--ja-gold)] text-[var(--ja-black)]"
+                        : "border-[var(--ja-border)] text-[var(--ja-gray)] hover:border-[var(--ja-gold)]/50"
+                    }`}
+                  >
+                    {p} pts (${(p / 100).toFixed(0)} off)
+                  </button>
+                ))}
+                {maxPts >= MIN_REDEEM && !availablePresets.includes(maxPts) && (
+                  <button
+                    onClick={() => setPointsToRedeem(maxPts)}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
+                      pointsToRedeem === maxPts
+                        ? "bg-[var(--ja-gold)] border-[var(--ja-gold)] text-[var(--ja-black)]"
+                        : "border-[var(--ja-border)] text-[var(--ja-gray)] hover:border-[var(--ja-gold)]/50"
+                    }`}
+                  >
+                    Max — {maxPts} pts (${(maxPts / 100).toFixed(0)} off)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Order Date */}
           <div className="bg-[var(--ja-card)] rounded-2xl border border-[var(--ja-border)] p-5">
@@ -138,7 +198,7 @@ export default function CheckoutPage() {
               required
               value={orderDate}
               min={getMinDate()}
-              max={getMaxDate()}
+              max={etDate(60)}
               onChange={(e) => setOrderDate(e.target.value)}
               className="w-full bg-[var(--ja-card)] border border-[var(--ja-border)] rounded-xl px-4 py-3 text-[var(--ja-white)] focus:outline-none focus:border-[var(--ja-gold)]/60 text-sm [color-scheme:dark]"
             />
@@ -165,7 +225,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Summary */}
+        {/* ── Order summary ── */}
         <div className="bg-[var(--ja-card)] rounded-2xl border border-[var(--ja-border)] p-6 h-fit">
           <h2 className="text-[var(--ja-white)] font-bold text-lg mb-5">Order Summary</h2>
 
@@ -182,14 +242,18 @@ export default function CheckoutPage() {
               <span>Pickup</span>
               <span className="text-[var(--ja-green)] font-bold">Free</span>
             </div>
+            {discountCents > 0 && (
+              <div className="flex justify-between text-[var(--ja-gold)]">
+                <span>Rewards ({pointsToRedeem} pts)</span>
+                <span className="font-bold">−{formatPrice(discountCents)}</span>
+              </div>
+            )}
             {orderDate && (
               <div className="flex justify-between text-[var(--ja-gray)]">
                 <span>Order Date</span>
                 <span className="text-[var(--ja-white)] font-semibold">
                   {new Date(orderDate + "T12:00:00").toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
+                    weekday: "short", month: "short", day: "numeric",
                   })}
                 </span>
               </div>
