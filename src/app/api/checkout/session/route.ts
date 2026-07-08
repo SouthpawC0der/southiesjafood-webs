@@ -37,6 +37,20 @@ export async function POST(req: NextRequest) {
     const orderType: "pickup" | "delivery" =
       rawOrderType === "delivery" ? "delivery" : "pickup";
 
+    // ── Order date — must be today or future, within 60 days ─────────────────
+    const orderDate = String(body.orderDate ?? "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(orderDate)) {
+      return NextResponse.json({ error: "Please select an order date." }, { status: 400 });
+    }
+    const selectedDate = new Date(orderDate + "T12:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 60);
+    if (selectedDate < today || selectedDate > maxDate) {
+      return NextResponse.json({ error: "Invalid order date." }, { status: 400 });
+    }
+
     if (!Array.isArray(rawItems) || rawItems.length === 0) {
       return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
     }
@@ -114,6 +128,7 @@ export async function POST(req: NextRequest) {
         items: itemSummary,
         specialInstructions: specialInstructions || "None",
         orderType,
+        orderDate,
       },
       payment_intent_data: {
         description: `Southie's Ja Foods — ${orderType === "delivery" ? "Delivery" : "To-Go"} Order`,

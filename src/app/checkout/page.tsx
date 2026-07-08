@@ -2,9 +2,37 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShoppingBag, Trash2 } from "lucide-react";
+import { Loader2, ShoppingBag, Trash2, CalendarDays } from "lucide-react";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
+
+// Returns "YYYY-MM-DD" for today (ET) if before noon, otherwise tomorrow.
+function getDefaultOrderDate(): string {
+  const et = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+  if (et.getHours() >= 12) et.setDate(et.getDate() + 1);
+  // Format as YYYY-MM-DD in local (ET) terms
+  const y = et.getFullYear();
+  const m = String(et.getMonth() + 1).padStart(2, "0");
+  const d = String(et.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getMinDate(): string {
+  return getDefaultOrderDate();
+}
+
+function getMaxDate(): string {
+  const et = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+  et.setDate(et.getDate() + 60);
+  const y = et.getFullYear();
+  const m = String(et.getMonth() + 1).padStart(2, "0");
+  const d = String(et.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -12,9 +40,12 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [orderDate, setOrderDate] = useState(getDefaultOrderDate);
+
+  const isSameDay = orderDate === getMinDate();
 
   async function handleCheckout() {
-    if (items.length === 0) return;
+    if (items.length === 0 || !orderDate) return;
     setLoading(true);
     setError("");
 
@@ -26,6 +57,7 @@ export default function CheckoutPage() {
           items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
           specialInstructions,
           orderType: "pickup",
+          orderDate,
         }),
       });
 
@@ -65,8 +97,9 @@ export default function CheckoutPage() {
       </h1>
 
       <div className="grid md:grid-cols-[1fr_360px] gap-8">
-        {/* Items */}
+        {/* Left column */}
         <div className="space-y-4">
+          {/* Items */}
           {items.map((item) => (
             <div
               key={item.id}
@@ -94,6 +127,29 @@ export default function CheckoutPage() {
             </div>
           ))}
 
+          {/* Order Date */}
+          <div className="bg-[var(--ja-card)] rounded-2xl border border-[var(--ja-border)] p-5">
+            <label className="flex items-center gap-2 text-sm font-bold text-[var(--ja-white)] mb-3">
+              <CalendarDays size={16} className="text-[var(--ja-gold)]" />
+              Order Date <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="date"
+              required
+              value={orderDate}
+              min={getMinDate()}
+              max={getMaxDate()}
+              onChange={(e) => setOrderDate(e.target.value)}
+              className="w-full bg-[var(--ja-card)] border border-[var(--ja-border)] rounded-xl px-4 py-3 text-[var(--ja-white)] focus:outline-none focus:border-[var(--ja-gold)]/60 text-sm [color-scheme:dark]"
+            />
+            {isSameDay && (
+              <p className="text-xs text-amber-400 mt-2">
+                Same-day orders must be placed before <strong>12 PM</strong>.
+              </p>
+            )}
+          </div>
+
+          {/* Special Instructions */}
           <div>
             <label className="block text-sm font-medium text-[var(--ja-gray)] mb-2">
               Special Instructions (optional)
@@ -126,6 +182,18 @@ export default function CheckoutPage() {
               <span>Pickup</span>
               <span className="text-[var(--ja-green)] font-bold">Free</span>
             </div>
+            {orderDate && (
+              <div className="flex justify-between text-[var(--ja-gray)]">
+                <span>Order Date</span>
+                <span className="text-[var(--ja-white)] font-semibold">
+                  {new Date(orderDate + "T12:00:00").toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
             <div className="border-t border-[var(--ja-border)] pt-3 flex justify-between text-[var(--ja-white)] font-black text-lg">
               <span>Total</span>
               <span className="text-[var(--ja-gold)]">{formatPrice(grandTotal)}</span>
@@ -140,7 +208,7 @@ export default function CheckoutPage() {
 
           <button
             onClick={handleCheckout}
-            disabled={loading}
+            disabled={loading || !orderDate}
             className="mt-5 w-full flex items-center justify-center gap-2 bg-[var(--ja-gold)] text-[var(--ja-black)] font-black py-4 rounded-xl hover:bg-[var(--ja-gold-dark)] transition-colors disabled:opacity-60 text-sm"
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : null}
