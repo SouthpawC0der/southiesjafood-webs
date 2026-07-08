@@ -14,7 +14,7 @@ const MAX_CART_ITEMS = 30;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed } = await checkRateLimit(`checkout:${ip}`);
+  const { allowed } = await checkRateLimit(`checkout:${ip}`, "checkout");
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
@@ -39,6 +39,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many items in cart." }, { status: 400 });
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    // Stripe requires absolute image URLs — convert local /public paths
+    const toAbsolute = (img: string) =>
+      img.startsWith("http") ? img : `${appUrl}${img}`;
+
     // ── Server-side price validation — never trust client prices ────────────
     const validatedItems = rawItems.map((item) => {
       const canonical = menuItems.find((m) => m.id === item.id);
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
           product_data: {
             name: canonical.name,
             description: canonical.description.slice(0, 200),
-            images: [canonical.image],
+            images: [toAbsolute(canonical.image)],
           },
           unit_amount: canonical.price, // server price, not client price
         },
@@ -64,8 +69,6 @@ export async function POST(req: NextRequest) {
     const itemSummary = rawItems
       .map((i) => `${i.id}:${Math.min(Math.max(1, Math.floor(i.quantity)), MAX_QUANTITY_PER_ITEM)}`)
       .join(",");
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
     const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],

@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
       webhookSecret
     );
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Webhook verification failed.";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    console.error("[webhook] signature verification failed:", err);
+    return NextResponse.json({ error: "Webhook verification failed." }, { status: 400 });
   }
 
   switch (event.type) {

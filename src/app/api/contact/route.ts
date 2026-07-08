@@ -9,9 +9,16 @@ const FROM_EMAIL = "Southie's Ja Foods <noreply@southiesjafood.com>";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed } = await checkRateLimit(`contact:${ip}`);
+  const { allowed } = await checkRateLimit(`contact:${ip}`, "contact");
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  }
+
+  // Reject cross-origin requests when the production URL is configured
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const origin = req.headers.get("origin");
+  if (appUrl && origin && origin !== appUrl) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   if (!process.env.RESEND_API_KEY) {

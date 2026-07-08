@@ -48,7 +48,7 @@ export type OrderWithItems = OrderRow & { items: OrderItemRow[] };
 /**
  * Fetch a user's orders (newest first) with their line items.
  * Always scoped by clerk_user_id — the caller passes the verified session
- * user ID, never client input. RLS enforces the same constraint in-database.
+ * user ID sourced from auth(), never from client input.
  */
 export async function getOrdersForUser(clerkUserId: string): Promise<OrderWithItems[]> {
   const sql = getSql();

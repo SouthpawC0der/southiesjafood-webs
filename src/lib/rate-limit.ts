@@ -8,22 +8,24 @@ const MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS ?? "60");
 // ── In-memory fallback (dev / no Upstash configured) ─────────────────────────
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-function checkInMemory(key: string): { allowed: boolean; remaining: number; resetIn: number } {
+function checkInMemory(
+  key: string,
+  max: number,
+  windowMs: number
+): { allowed: boolean; remaining: number; resetIn: number } {
   const now = Date.now();
   const entry = rateLimitMap.get(key);
-
   if (!entry || now > entry.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + WINDOW_MS });
-    return { allowed: true, remaining: MAX_REQUESTS - 1, resetIn: WINDOW_MS };
+    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, remaining: max - 1, resetIn: windowMs };
   }
-  if (entry.count >= MAX_REQUESTS) {
+  if (entry.count >= max) {
     return { allowed: false, remaining: 0, resetIn: entry.resetTime - now };
   }
   entry.count++;
-  return { allowed: true, remaining: MAX_REQUESTS - entry.count, resetIn: entry.resetTime - now };
+  return { allowed: true, remaining: max - entry.count, resetIn: entry.resetTime - now };
 }
 
-// Cleanup old in-memory entries every 5 minutes
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
@@ -33,40 +35,56 @@ if (typeof setInterval !== "undefined") {
   }, 5 * 60 * 1000);
 }
 
-// ── Upstash distributed rate limiting (production) ────────────────────────────
-// Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in Vercel env vars.
-// Falls back to in-memory silently when not configured or on error.
-const ratelimit =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? new Ratelimit({
-        redis: new Redis({
-          url: process.env.UPSTASH_REDIS_REST_URL,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN,
-        }),
-        limiter: Ratelimit.slidingWindow(MAX_REQUESTS, `${Math.floor(WINDOW_MS / 1000)} s`),
-        analytics: true,
-        prefix: "sja_rl",
-      })
-    : null;
+// ── Upstash distributed rate limiters ────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeUpstashLimiter(max: number, window: string): Ratelimit | null {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) return null;
+  return new Ratelimit({
+    redis: new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    limiter: Ratelimit.slidingWindow(max, window as any),
+    analytics: true,
+    prefix: "sja_rl",
+  });
+}
+
+const defaultWindow = `${Math.floor(WINDOW_MS / 1000)} s`;
+
+const limiters = {
+  default:  { upstash: makeUpstashLimiter(MAX_REQUESTS, defaultWindow), max: MAX_REQUESTS, windowMs: WINDOW_MS },
+  checkout: { upstash: makeUpstashLimiter(5,  "60 s"),                  max: 5,            windowMs: 60_000    },
+  contact:  { upstash: makeUpstashLimiter(3,  "3600 s"),                max: 3,            windowMs: 3_600_000 },
+} as const;
+
+export type RateLimitTier = keyof typeof limiters;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function getClientIp(request: NextRequest): string {
+  // x-real-ip is set authoritatively by Vercel's edge and cannot be spoofed by clients
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp;
+  // Fallback for local dev — leftmost XFF is acceptable when there's no trusted proxy header
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return "unknown";
 }
 
 export async function checkRateLimit(
-  key: string
+  key: string,
+  tier: RateLimitTier = "default"
 ): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
-  if (ratelimit) {
+  const { upstash, max, windowMs } = limiters[tier];
+  if (upstash) {
     try {
-      const { success, remaining, reset } = await ratelimit.limit(key);
+      const { success, remaining, reset } = await upstash.limit(key);
       return { allowed: success, remaining, resetIn: Math.max(0, reset - Date.now()) };
     } catch (err) {
       console.error("[rate-limit] Upstash error, falling back to in-memory:", err);
     }
   }
-  return checkInMemory(key);
+  return checkInMemory(key, max, windowMs);
 }
