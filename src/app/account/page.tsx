@@ -3,9 +3,8 @@ import { currentUser } from "@clerk/nextjs/server";
 import { SignOutButton } from "@clerk/nextjs";
 import { Package, LogOut, ArrowRight, Star, TrendingUp, UserCog } from "lucide-react";
 import { getOrdersForUser, type OrderStatus, type OrderWithItems } from "@/db";
-import { getLoyaltyAccount, getLoyaltyTransactions, type LoyaltyTransaction } from "@/db/loyalty";
+import { getSquare } from "@/lib/square";
 import { formatPrice } from "@/lib/menu-data";
-import { getTier, getNextTier, tierProgress, pointsToCents } from "@/lib/loyalty-config";
 import { ProfileSettings } from "@/components/auth/ProfileSettings";
 
 export const metadata = { title: "My Account | Southie's Ja Foods" };
@@ -26,26 +25,114 @@ const TIER_STYLE: Record<string, string> = {
   Bronze: "bg-[#92400E] text-white",
 };
 
+type LoyaltyData = {
+  configured: boolean;
+  balance: number;
+  lifetimePoints: number;
+  currentTierName: string | null;
+  nextTierName: string | null;
+  ptsToNextTier: number;
+  progress: number;
+  transactions: Array<{
+    id: string | null | undefined;
+    type: string | undefined;
+    points: number;
+    created_at: string | undefined;
+    description: string;
+  }>;
+};
+
+async function fetchSquareLoyalty(email: string): Promise<LoyaltyData> {
+  const empty: LoyaltyData = {
+    configured: false, balance: 0, lifetimePoints: 0,
+    currentTierName: null, nextTierName: null, ptsToNextTier: 0, progress: 0,
+    transactions: [],
+  };
+  try {
+    const square = getSquare();
+
+    const programRes = await square.loyalty.programs.get({ programId: "main" }).catch(() => null);
+    if (!programRes?.program) return empty;
+    const program = programRes.program;
+
+    const customerSearch = await square.customers.search({
+      query: { filter: { emailAddress: { exact: email } } },
+    }).catch(() => null);
+    const customerId = customerSearch?.customers?.[0]?.id ?? null;
+
+    const account = customerId
+      ? await square.loyalty.accounts.search({ query: { customerIds: [customerId] } })
+          .then((r) => r.loyaltyAccounts?.[0] ?? null).catch(() => null)
+      : null;
+
+    const balance        = account?.balance        ?? 0;
+    const lifetimePoints = account?.lifetimePoints ?? 0;
+    const accountId      = account?.id             ?? null;
+
+    const rewardTiers = (program.rewardTiers ?? [])
+      .slice().sort((a, b) => (a.points ?? 0) - (b.points ?? 0));
+
+    const currentTier = [...rewardTiers].reverse()
+      .find((t) => balance >= (t.points ?? 0)) ?? rewardTiers[0] ?? null;
+    const nextTier = currentTier
+      ? rewardTiers.find((t) => (t.points ?? 0) > (currentTier.points ?? 0)) ?? null
+      : rewardTiers[0] ?? null;
+
+    const progress = nextTier && currentTier
+      ? Math.min(100, Math.round(
+          ((balance - (currentTier.points ?? 0)) /
+           ((nextTier.points ?? 1) - (currentTier.points ?? 0))) * 100
+        ))
+      : 100;
+
+    const eventsRes = accountId
+      ? await square.loyalty.searchEvents({
+          query: { filter: { loyaltyAccountFilter: { loyaltyAccountId: accountId } } },
+          limit: 20,
+        }).catch(() => null)
+      : null;
+
+    const transactions = (eventsRes?.events ?? []).map((e) => ({
+      id:          e.id,
+      type:        e.type,
+      points:      e.accumulatePoints?.points ?? 0,
+      created_at:  e.createdAt,
+      description: e.type === "ACCUMULATE_POINTS" ? "Points earned" : "Points redeemed",
+    }));
+
+    return {
+      configured: true,
+      balance,
+      lifetimePoints,
+      currentTierName: currentTier?.name ?? null,
+      nextTierName:    nextTier?.name ?? null,
+      ptsToNextTier:   nextTier ? Math.max(0, (nextTier.points ?? 0) - balance) : 0,
+      progress,
+      transactions,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export default async function AccountPage() {
   const user = await currentUser();
   if (!user) return null;
 
   const firstName = user.firstName ?? user.emailAddresses[0]?.emailAddress.split("@")[0] ?? "friend";
+  const email     = user.emailAddresses[0]?.emailAddress ?? "";
 
-  const [orders, loyaltyAccount, loyaltyTx] = await Promise.all([
+  const [orders, loyalty] = await Promise.all([
     getOrdersForUser(user.id).catch(() => [] as OrderWithItems[]),
-    getLoyaltyAccount(user.id).catch(() => null),
-    getLoyaltyTransactions(user.id, 10).catch(() => [] as LoyaltyTransaction[]),
+    email ? fetchSquareLoyalty(email) : Promise.resolve({
+      configured: false, balance: 0, lifetimePoints: 0,
+      currentTierName: null, nextTierName: null, ptsToNextTier: 0, progress: 0,
+      transactions: [],
+    }),
   ]);
 
-  const balance      = loyaltyAccount?.points_balance        ?? 0;
-  const earned       = loyaltyAccount?.points_earned_total   ?? 0;
-  const redeemed     = loyaltyAccount?.points_redeemed_total ?? 0;
-  const tier         = getTier(earned);
-  const nextTier     = getNextTier(earned);
-  const progress     = tierProgress(earned);
-  const ptsToNext    = nextTier ? nextTier.min - earned : 0;
-  const dollarValue  = (pointsToCents(balance) / 100).toFixed(2);
+  const { balance, lifetimePoints, currentTierName, nextTierName, ptsToNextTier, progress, transactions } = loyalty;
+  const redeemed = Math.max(0, lifetimePoints - balance);
 
   return (
     <div className="bg-[var(--paper)] min-h-screen pt-[76px]">
@@ -100,21 +187,20 @@ export default async function AccountPage() {
                   <p className="font-display text-6xl text-[var(--ink)] leading-none">
                     {balance.toLocaleString()}
                   </p>
-                  <p className="text-[var(--muted)] text-sm mt-1">
-                    ≈ <strong className="text-[var(--green)]">${dollarValue}</strong> in rewards
-                  </p>
                 </div>
-                <span className={`chip text-sm font-black px-4 py-1.5 ${TIER_STYLE[tier.name] ?? ""}`}>
-                  {tier.name}
-                </span>
+                {currentTierName && (
+                  <span className={`chip text-sm font-black px-4 py-1.5 ${TIER_STYLE[currentTierName] ?? "bg-[var(--cream)] text-[var(--ink)]"}`}>
+                    {currentTierName}
+                  </span>
+                )}
               </div>
 
               {/* Tier progress */}
-              {nextTier ? (
+              {nextTierName ? (
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-[var(--muted)] mb-2">
-                    <span>{tier.name}</span>
-                    <span>{ptsToNext.toLocaleString()} pts to {nextTier.name}</span>
+                    <span>{currentTierName ?? "Member"}</span>
+                    <span>{ptsToNextTier.toLocaleString()} pts to {nextTierName}</span>
                   </div>
                   <div className="h-3 bg-[var(--cream)] border-2 border-[var(--ink)] overflow-hidden">
                     <div
@@ -122,13 +208,12 @@ export default async function AccountPage() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-[var(--faint)] mt-2">{nextTier.label}</p>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 bg-[var(--cream)] border-2 border-[var(--ink)] px-4 py-3">
                   <Star size={16} className="text-[#D4AF37]" fill="currentColor" />
                   <p className="text-sm font-bold text-[var(--ink)]">
-                    You&apos;ve reached Gold — maximum earn rate!
+                    You&apos;ve reached the top tier — maximum earn rate!
                   </p>
                 </div>
               )}
@@ -136,8 +221,8 @@ export default async function AccountPage() {
               {/* Stats row */}
               <div className="grid grid-cols-2 gap-4 mt-6">
                 {[
-                  { label: "Lifetime Earned",   value: earned.toLocaleString()   + " pts" },
-                  { label: "Lifetime Redeemed", value: redeemed.toLocaleString() + " pts" },
+                  { label: "Lifetime Earned",   value: lifetimePoints.toLocaleString() + " pts" },
+                  { label: "Lifetime Redeemed", value: redeemed.toLocaleString()        + " pts" },
                 ].map(({ label, value }) => (
                   <div key={label} className="bg-[var(--cream)] border-2 border-[var(--ink)] p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[var(--faint)]">{label}</p>
@@ -158,10 +243,10 @@ export default async function AccountPage() {
                   { tier: "Bronze", pts: "10 pts / $1",  threshold: "0 – 999 lifetime pts"  },
                   { tier: "Silver", pts: "12 pts / $1",  threshold: "1,000 lifetime pts"     },
                   { tier: "Gold",   pts: "15 pts / $1",  threshold: "3,000 lifetime pts"     },
-                ].map(({ tier: t, pts, threshold }) => (
-                  <li key={t} className="flex justify-between border-b border-white/10 pb-3 last:border-0 last:pb-0">
+                ].map(({ tier, pts, threshold }) => (
+                  <li key={tier} className="flex justify-between border-b border-white/10 pb-3 last:border-0 last:pb-0">
                     <span>
-                      <span className={`text-xs font-black mr-2 px-2 py-0.5 ${TIER_STYLE[t] ?? ""}`}>{t}</span>
+                      <span className={`text-xs font-black mr-2 px-2 py-0.5 ${TIER_STYLE[tier] ?? ""}`}>{tier}</span>
                       <span className="text-white/70">{threshold}</span>
                     </span>
                     <span className="font-bold text-[var(--gold)] shrink-0 ml-2">{pts}</span>
@@ -169,12 +254,12 @@ export default async function AccountPage() {
                 ))}
               </ul>
               <div className="border-t border-white/10 pt-4 text-xs text-white/55 space-y-1">
-                <p>100 pts = $1 off your next order</p>
-                <p>Minimum 500 pts ($5) to redeem</p>
+                <p>Redeem points automatically at checkout</p>
+                <p>Powered by Square Loyalty</p>
               </div>
-              {balance >= 500 && (
+              {balance > 0 && (
                 <Link href="/menu" className="btn-block btn-gold !py-3 text-[13px]">
-                  Redeem at Checkout <ArrowRight size={15} />
+                  Order &amp; Earn More <ArrowRight size={15} />
                 </Link>
               )}
             </div>
@@ -182,14 +267,14 @@ export default async function AccountPage() {
         </section>
 
         {/* ═══ Transaction History ══════════════════════════════════════════════ */}
-        {loyaltyTx.length > 0 && (
+        {transactions.length > 0 && (
           <section>
             <h2 className="font-display text-4xl text-[var(--ink)] mb-6">Points History</h2>
             <div className="block-card overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-[var(--cream)] border-b-2 border-[var(--ink)]">
                   <tr>
-                    {["Date", "Description", "Points", "Balance"].map((h) => (
+                    {["Date", "Description", "Points"].map((h) => (
                       <th key={h} className="text-left px-5 py-3 text-[11px] font-black uppercase tracking-widest text-[var(--faint)]">
                         {h}
                       </th>
@@ -197,24 +282,23 @@ export default async function AccountPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loyaltyTx.map((tx, i) => {
-                    const isEarn = tx.type === "earn";
+                  {transactions.map((tx, i) => {
+                    const isEarn = tx.type === "ACCUMULATE_POINTS";
                     return (
-                      <tr key={tx.id}
+                      <tr key={tx.id ?? i}
                         className={`border-b border-[var(--line-soft)] last:border-0 ${i % 2 === 1 ? "bg-[var(--cream)]/30" : ""}`}>
                         <td className="px-5 py-3 text-[var(--muted)] whitespace-nowrap">
-                          {new Date(tx.created_at).toLocaleDateString("en-US", {
-                            month: "short", day: "numeric", year: "numeric",
-                          })}
+                          {tx.created_at
+                            ? new Date(tx.created_at).toLocaleDateString("en-US", {
+                                month: "short", day: "numeric", year: "numeric",
+                              })
+                            : "—"}
                         </td>
                         <td className="px-5 py-3 text-[var(--ink)] font-semibold max-w-xs truncate">
                           {tx.description}
                         </td>
                         <td className={`px-5 py-3 font-black ${isEarn ? "text-[var(--green)]" : "text-red-500"}`}>
                           {isEarn ? "+" : ""}{tx.points.toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3 font-bold text-[var(--ink)]">
-                          {tx.balance_after.toLocaleString()}
                         </td>
                       </tr>
                     );

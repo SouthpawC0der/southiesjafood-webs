@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShoppingBag, Trash2, CalendarDays, Star } from "lucide-react";
+import { Loader2, ShoppingBag, Trash2, CalendarDays } from "lucide-react";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
-import {
-  MIN_REDEEM, maxRedeemable, pointsToCents,
-} from "@/lib/loyalty-config";
 
 // ── Date helpers (Eastern Time) ───────────────────────────────────────────────
 function etDate(offsetDays = 0): string {
@@ -24,42 +21,32 @@ function getMinDate() {
   return etDate(et.getHours() >= 12 ? 1 : 0);
 }
 
-// ── Preset redemption options ─────────────────────────────────────────────────
-const PRESETS = [500, 1000, 1500, 2000]; // points
-
-type LoyaltyData = { balance: number; tier: string } | null;
+type PaymentMethod = "square" | "paypal";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, removeItem } = useCartStore();
-  const [loading,  setLoading]  = useState(false);
+  const [loading,  setLoading]  = useState<PaymentMethod | null>(null);
   const [error,    setError]    = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [orderDate, setOrderDate] = useState(getMinDate);
-  const [loyalty,  setLoyalty]  = useState<LoyaltyData>(null);
-  const [pointsToRedeem, setPointsToRedeem] = useState(0);
 
-  useEffect(() => {
-    fetch("/api/loyalty/balance")
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => d && setLoyalty({ balance: d.balance, tier: d.tier }))
-      .catch(() => {/* not fatal */});
-  }, []);
-
-  async function handleCheckout() {
+  async function handleCheckout(method: PaymentMethod) {
     if (items.length === 0 || !orderDate) return;
-    setLoading(true);
+    setLoading(method);
     setError("");
     try {
-      const res = await fetch("/api/checkout/session", {
+      const endpoint = method === "square"
+        ? "/api/checkout/square"
+        : "/api/checkout/stripe-paypal";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
           specialInstructions,
-          orderType: "pickup",
           orderDate,
-          pointsToRedeem,
         }),
       });
       const data = await res.json();
@@ -67,7 +54,7 @@ export default function CheckoutPage() {
       window.location.href = data.url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-      setLoading(false);
+      setLoading(null);
     }
   }
 
@@ -86,16 +73,10 @@ export default function CheckoutPage() {
     );
   }
 
-  const subtotal     = total();
-  const tax          = Math.round(subtotal * 0.0875);
-  const discountCents = pointsToCents(pointsToRedeem);
-  const grandTotal   = Math.max(0, subtotal + tax - discountCents);
-  const isSameDay    = orderDate === getMinDate();
-
-  // Compute which preset buttons are available
-  const maxPts = loyalty ? maxRedeemable(loyalty.balance, subtotal) : 0;
-  const availablePresets = PRESETS.filter((p) => p <= maxPts && p >= MIN_REDEEM);
-  const showRewards = loyalty !== null && loyalty.balance >= MIN_REDEEM;
+  const subtotal  = total();
+  const tax       = Math.round(subtotal * 0.0875);
+  const grandTotal = subtotal + tax;
+  const isSameDay = orderDate === getMinDate();
 
   return (
     <div className="max-w-4xl mx-auto px-6 pt-32 pb-24">
@@ -128,64 +109,6 @@ export default function CheckoutPage() {
               </button>
             </div>
           ))}
-
-          {/* Rewards redemption */}
-          {showRewards && (
-            <div className="bg-[var(--ja-card)] rounded-2xl border border-[var(--ja-border)] p-5">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <Star size={16} className="text-[var(--ja-gold)]" fill="currentColor" />
-                  <span className="text-sm font-bold text-[var(--ja-white)]">
-                    Rewards — {loyalty!.tier} Member
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-[var(--ja-gold)]">
-                  {loyalty!.balance.toLocaleString()} pts
-                  {" "}(${(loyalty!.balance / 100).toFixed(2)} value)
-                </span>
-              </div>
-              <p className="text-xs text-[var(--ja-gray)] mb-3">
-                100 pts = $1 off. Select an amount to apply:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setPointsToRedeem(0)}
-                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
-                    pointsToRedeem === 0
-                      ? "bg-[var(--ja-gold)] border-[var(--ja-gold)] text-[var(--ja-black)]"
-                      : "border-[var(--ja-border)] text-[var(--ja-gray)] hover:border-[var(--ja-gold)]/50"
-                  }`}
-                >
-                  None
-                </button>
-                {availablePresets.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPointsToRedeem(p)}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
-                      pointsToRedeem === p
-                        ? "bg-[var(--ja-gold)] border-[var(--ja-gold)] text-[var(--ja-black)]"
-                        : "border-[var(--ja-border)] text-[var(--ja-gray)] hover:border-[var(--ja-gold)]/50"
-                    }`}
-                  >
-                    {p} pts (${(p / 100).toFixed(0)} off)
-                  </button>
-                ))}
-                {maxPts >= MIN_REDEEM && !availablePresets.includes(maxPts) && (
-                  <button
-                    onClick={() => setPointsToRedeem(maxPts)}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
-                      pointsToRedeem === maxPts
-                        ? "bg-[var(--ja-gold)] border-[var(--ja-gold)] text-[var(--ja-black)]"
-                        : "border-[var(--ja-border)] text-[var(--ja-gray)] hover:border-[var(--ja-gold)]/50"
-                    }`}
-                  >
-                    Max — {maxPts} pts (${(maxPts / 100).toFixed(0)} off)
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Order Date */}
           <div className="bg-[var(--ja-card)] rounded-2xl border border-[var(--ja-border)] p-5">
@@ -242,12 +165,6 @@ export default function CheckoutPage() {
               <span>Pickup</span>
               <span className="text-[var(--ja-green)] font-bold">Free</span>
             </div>
-            {discountCents > 0 && (
-              <div className="flex justify-between text-[var(--ja-gold)]">
-                <span>Rewards ({pointsToRedeem} pts)</span>
-                <span className="font-bold">−{formatPrice(discountCents)}</span>
-              </div>
-            )}
             {orderDate && (
               <div className="flex justify-between text-[var(--ja-gray)]">
                 <span>Order Date</span>
@@ -270,20 +187,50 @@ export default function CheckoutPage() {
             </p>
           )}
 
+          {/* ── Pay Now (Square) ── */}
           <button
-            onClick={handleCheckout}
-            disabled={loading || !orderDate}
+            onClick={() => handleCheckout("square")}
+            disabled={loading !== null || !orderDate}
             className="mt-5 w-full flex items-center justify-center gap-2 bg-[var(--ja-gold)] text-[var(--ja-black)] font-black py-4 rounded-xl hover:bg-[var(--ja-gold-dark)] transition-colors disabled:opacity-60 text-sm"
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-            Pay Securely
+            {loading === "square"
+              ? <Loader2 size={16} className="animate-spin" />
+              : null}
+            Pay Now
           </button>
 
-          <p className="text-center text-xs text-[var(--ja-gray)] mt-3">
-            Secured by Stripe · Apple Pay · Google Pay
+          <p className="text-center text-xs text-[var(--ja-gray)] mt-2 mb-4">
+            Card · Apple Pay · Google Pay · Cash App
           </p>
+
+          {/* ── Divider ── */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 border-t border-[var(--ja-border)]" />
+            <span className="text-xs text-[var(--ja-gray)] font-semibold">or</span>
+            <div className="flex-1 border-t border-[var(--ja-border)]" />
+          </div>
+
+          {/* ── Pay with PayPal (Stripe) ── */}
+          <button
+            onClick={() => handleCheckout("paypal")}
+            disabled={loading !== null || !orderDate}
+            className="w-full flex items-center justify-center gap-2 bg-[#003087] text-white font-black py-3.5 rounded-xl hover:bg-[#002069] transition-colors disabled:opacity-60 text-sm"
+          >
+            {loading === "paypal"
+              ? <Loader2 size={16} className="animate-spin" />
+              : <PayPalIcon />}
+            Pay with PayPal
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function PayPalIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
+    </svg>
   );
 }

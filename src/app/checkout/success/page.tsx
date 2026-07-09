@@ -1,30 +1,44 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getStripe } from "@/lib/stripe";
+import { getSquare } from "@/lib/square";
 import SuccessContent from "./SuccessContent";
 
 export default async function CheckoutSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ session_id?: string; orderId?: string }>;
 }) {
-  const { session_id } = await searchParams;
+  const { session_id, orderId } = await searchParams;
 
-  if (!session_id) redirect("/menu");
+  if (!session_id && !orderId) redirect("/menu");
 
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // Verify the session belongs to this user before showing the success page.
-  // redirect() is intentionally outside try so NEXT_REDIRECT is never swallowed.
   let verified = false;
-  try {
-    const session = await getStripe().checkout.sessions.retrieve(session_id);
-    verified =
-      session.payment_status === "paid" &&
-      session.metadata?.clerkUserId === userId;
-  } catch {
-    // Stripe API error — treat as unverified
+
+  if (session_id) {
+    // ── Stripe PayPal flow ──────────────────────────────────────────────────
+    try {
+      const session = await getStripe().checkout.sessions.retrieve(session_id);
+      verified =
+        session.payment_status === "paid" &&
+        session.metadata?.clerkUserId === userId;
+    } catch {
+      // Stripe API error — treat as unverified
+    }
+  } else if (orderId) {
+    // ── Square flow ─────────────────────────────────────────────────────────
+    try {
+      const response = await getSquare().orders.get({ orderId });
+      const order = response.order;
+      verified =
+        order?.state === "COMPLETED" &&
+        order?.metadata?.clerk_user_id === userId;
+    } catch {
+      // Square API error — treat as unverified
+    }
   }
 
   if (!verified) redirect("/menu");
