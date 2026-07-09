@@ -12,21 +12,22 @@ export default async function CheckoutSuccessPage({
 
   if (!session_id) redirect("/menu");
 
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  // Verify the session belongs to this user before showing the success page.
+  // redirect() is intentionally outside try so NEXT_REDIRECT is never swallowed.
+  let verified = false;
   try {
-    const { userId } = await auth();
-    if (!userId) redirect("/sign-in");
-
     const session = await getStripe().checkout.sessions.retrieve(session_id);
-
-    if (
-      session.payment_status !== "paid" ||
-      session.metadata?.clerkUserId !== userId
-    ) {
-      redirect("/menu");
-    }
+    verified =
+      session.payment_status === "paid" &&
+      session.metadata?.clerkUserId === userId;
   } catch {
-    redirect("/menu");
+    // Stripe API error — treat as unverified
   }
+
+  if (!verified) redirect("/menu");
 
   return <SuccessContent />;
 }

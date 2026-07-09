@@ -1,4 +1,4 @@
-export type MenuSection = "classics" | "modern";
+export type MenuSection = "classics" | "modern" | "drinks";
 export type ClassicsCategory = "jerk" | "curry" | "stews";
 
 export type MenuItem = {
@@ -147,6 +147,37 @@ const stewItems: MenuItem[] = [
   },
 ];
 
+// ── Drinks ────────────────────────────────────────────────────────────────────
+
+const drinkItems: MenuItem[] = [
+  {
+    id: "pineapple-drink",
+    name: "Pineapple Drink",
+    description: "Fresh squeezed pineapple juice — sweet, tropical, and made to order.",
+    price: 495,
+    section: "drinks",
+    image: "/images/pineapple-drink.jpg",
+    popular: true,
+    tag: "Fresh Squeezed",
+  },
+  {
+    id: "ginger-beer",
+    name: "Ginger Beer",
+    description: "Jamaican Ginger Beer — bold, spicy, and brewed the island way.",
+    price: 395,
+    section: "drinks",
+    image: "/images/ginger-beer.jpg",
+  },
+  {
+    id: "carrot-juice",
+    name: "Carrot Juice",
+    description: "Smooth, naturally sweet Jamaican-style carrot juice blended fresh.",
+    price: 495,
+    section: "drinks",
+    image: "/images/carrot-juice.jpg",
+  },
+];
+
 // ── Modern Twists ─────────────────────────────────────────────────────────────
 
 const modernItems: MenuItem[] = [
@@ -199,12 +230,14 @@ export const classicsCategories = [
 ];
 
 export const modernMenuItems = modernItems;
+export const drinkMenuItems  = drinkItems;
 
 export const menuItems: MenuItem[] = [
   ...jerkItems,
   ...curryItems,
   ...stewItems,
   ...modernItems,
+  ...drinkItems,
 ];
 
 // Featured items for the homepage

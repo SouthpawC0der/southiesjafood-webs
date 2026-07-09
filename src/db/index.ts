@@ -1,14 +1,4 @@
-import { neon } from "@neondatabase/serverless";
-
-/**
- * Neon serverless Postgres client.
- * DATABASE_URL is set by the Vercel/Neon integration (never hardcoded).
- */
-function getSql() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not configured.");
-  return neon(url);
-}
+import { getSql } from "./client";
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
 
@@ -94,7 +84,7 @@ export async function createOrderFromWebhook(params: {
   totalCents: number;
   specialInstructions: string | null;
   items: Array<{ menuItemId: string; name: string; priceCents: number; quantity: number }>;
-}): Promise<void> {
+}): Promise<boolean> {
   const sql = getSql();
 
   const inserted = (await sql`
@@ -111,7 +101,7 @@ export async function createOrderFromWebhook(params: {
   `) as Array<{ id: string }>;
 
   // Duplicate webhook delivery — order already recorded
-  if (inserted.length === 0) return;
+  if (inserted.length === 0) return false;
 
   const orderId = inserted[0].id;
   for (const item of params.items) {
@@ -120,4 +110,5 @@ export async function createOrderFromWebhook(params: {
       VALUES (${orderId}, ${item.menuItemId}, ${item.name}, ${item.priceCents}, ${item.quantity})
     `;
   }
+  return true;
 }

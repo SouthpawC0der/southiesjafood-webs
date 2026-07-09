@@ -76,6 +76,7 @@ export default function ContactPage() {
                 { icon: <Phone size={17} />,  label: "Phone",    value: "(704) 995-6714",          href: "tel:+17049956714" },
                 { icon: <Mail size={17} />,   label: "Email",    value: "eats@southiesjafood.com", href: "mailto:eats@southiesjafood.com" },
                 { icon: <MapPin size={17} />, label: "Based in", value: "Charlotte, NC",           href: undefined },
+                { icon: <InstagramIcon />,   label: "Instagram", value: "@southiesjafood",         href: "https://instagram.com/southiesjafood" },
               ].map(({ icon, label, value, href }) => (
                 <li key={label}>
                   {href ? (
@@ -219,6 +220,16 @@ function Field({ label, required, children }: { label: string; required?: boolea
       </span>
       {children}
     </label>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
 

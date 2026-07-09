@@ -6,6 +6,7 @@ import { Plus, Flame, ShoppingBag } from "lucide-react";
 import {
   classicsCategories,
   modernMenuItems,
+  drinkMenuItems,
   formatPrice,
   type MenuItem,
 } from "@/lib/menu-data";
@@ -20,12 +21,14 @@ const FILTERS = [
   { id: "curry",  label: "Curry" },
   { id: "stews",  label: "Stews & Classics" },
   { id: "modern", label: "Modern Twists" },
+  { id: "drinks", label: "Drinks" },
 ];
 
 const CATEGORY_LABEL: Record<string, string> = {
-  jerk:  "Jerk",
-  curry: "Curry",
-  stews: "Stews & Classics",
+  jerk:   "Jerk",
+  curry:  "Curry",
+  stews:  "Stews & Classics",
+  drinks: "Drinks",
 };
 
 export default function MenuPage() {
@@ -35,13 +38,14 @@ export default function MenuPage() {
   const cartTotal = useCartStore((s) => s.total());
 
   const allItems = useMemo(
-    () => [...classicsCategories.flatMap((c) => c.items), ...modernMenuItems],
+    () => [...classicsCategories.flatMap((c) => c.items), ...modernMenuItems, ...drinkMenuItems],
     []
   );
 
   const visible = useMemo(() => {
     if (filter === "all")    return allItems;
     if (filter === "modern") return allItems.filter((i) => i.section === "modern");
+    if (filter === "drinks") return allItems.filter((i) => i.section === "drinks");
     return allItems.filter((i) => i.category === filter);
   }, [allItems, filter]);
 
@@ -89,7 +93,7 @@ export default function MenuPage() {
       {/* ═══ Grid ═══════════════════════════════════════════════════════════ */}
       <div className="max-w-[1200px] mx-auto px-8 sm:px-16 lg:px-20 py-12 lg:py-16">
         <p className="text-[var(--faint)] text-sm font-bold uppercase tracking-wider mb-8">
-          {visible.length} {visible.length === 1 ? "dish" : "dishes"}
+          {visible.length} {visible.length === 1 ? "item" : "items"}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -148,9 +152,9 @@ export default function MenuPage() {
 /* ── Menu Card ────────────────────────────────────────────────────────────── */
 function MenuCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   const categoryLabel =
-    item.section === "modern"
-      ? "Modern Twist"
-      : CATEGORY_LABEL[item.category ?? ""] ?? "";
+    item.section === "drinks" ? "Drinks" :
+    item.section === "modern" ? "Modern Twist" :
+    CATEGORY_LABEL[item.category ?? ""] ?? "";
 
   return (
     <article className="block-card flex flex-col">

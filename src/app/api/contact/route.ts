@@ -14,10 +14,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
-  // Reject cross-origin requests when the production URL is configured
+  // In production, require requests to originate from the app URL.
+  // Absent Origin (curl, Postman) is also rejected in production to prevent
+  // automated abuse — rate limiting is the primary guard in development.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const origin = req.headers.get("origin");
-  if (appUrl && origin && origin !== appUrl) {
+  if (appUrl && origin !== appUrl) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 

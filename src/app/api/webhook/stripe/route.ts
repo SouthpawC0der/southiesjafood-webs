@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { menuItems } from "@/lib/menu-data";
 import { createOrderFromWebhook } from "@/db";
-import { awardAndDeductPoints, getLoyaltyAccount } from "@/db/loyalty";
+import { awardAndDeductPoints, awardEarnedPoints, getLoyaltyAccount, releaseReservedPoints } from "@/db/loyalty";
 import { calcPointsEarned } from "@/lib/loyalty-config";
 import type Stripe from "stripe";
 
@@ -63,10 +63,10 @@ export async function POST(req: NextRequest) {
 
       const subtotal = items.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
 
-      // ── Persist order ──────────────────────────────────────────────────────
+      // ── Persist order (returns true only on a new insert, false on replay) ─
       let orderInserted = false;
       try {
-        await createOrderFromWebhook({
+        orderInserted = await createOrderFromWebhook({
           clerkUserId,
           email:               session.customer_details?.email ?? null,
           stripeSessionId:     session.id,
@@ -79,18 +79,20 @@ export async function POST(req: NextRequest) {
               : null,
           items,
         });
-        orderInserted = true;
       } catch (err) {
         console.error("Webhook: failed to persist order", session.id, err);
         return NextResponse.json({ error: "Order persistence failed." }, { status: 500 });
       }
 
-      // ── Award loyalty points ───────────────────────────────────────────────
+      // ── Award loyalty points (only on a genuinely new order) ───────────────
+      // orderInserted = false means Stripe already delivered this event and we
+      // processed it; skip to avoid double-awarding points.
       if (orderInserted) {
         try {
           const amountPaid      = session.amount_total ?? 0;
           const pointsRedeemed  = Math.max(0, parseInt(meta.pointsRedeemed ?? "0", 10));
-          // Lifetime earned determines tier multiplier for this order
+          const preDeducted     = meta.pointsPreDeducted === "true";
+
           const existing        = await getLoyaltyAccount(clerkUserId).catch(() => null);
           const lifetimeEarned  = existing?.points_earned_total ?? 0;
           const pointsEarned    = calcPointsEarned(amountPaid, lifetimeEarned);
@@ -100,16 +102,50 @@ export async function POST(req: NextRequest) {
             .join(", ")
             .slice(0, 200);
 
-          await awardAndDeductPoints({
-            clerkUserId,
-            pointsEarned,
-            pointsRedeemed,
-            stripeSessionId:  session.id,
-            orderDescription: `Order: ${orderSummary}`,
-          });
+          if (preDeducted) {
+            // Points were already deducted from the balance at checkout;
+            // only add earned points (no second deduction).
+            await awardEarnedPoints({
+              clerkUserId,
+              pointsEarned,
+              pointsRedeemed,
+              stripeSessionId:  session.id,
+              orderDescription: `Order: ${orderSummary}`,
+            });
+          } else {
+            await awardAndDeductPoints({
+              clerkUserId,
+              pointsEarned,
+              pointsRedeemed,
+              stripeSessionId:  session.id,
+              orderDescription: `Order: ${orderSummary}`,
+            });
+          }
         } catch (err) {
           // Points failure must NOT fail the webhook — order is already recorded
           console.error("Webhook: loyalty points error", session.id, err);
+        }
+      }
+      break;
+    }
+
+    case "checkout.session.expired": {
+      // Restore any points that were pre-deducted at checkout but never paid.
+      const session = event.data.object as Stripe.Checkout.Session;
+      const meta    = session.metadata ?? {};
+
+      if (
+        meta.pointsPreDeducted === "true" &&
+        meta.clerkUserId &&
+        meta.pointsRedeemed
+      ) {
+        const pts = parseInt(meta.pointsRedeemed, 10);
+        if (pts > 0) {
+          try {
+            await releaseReservedPoints(meta.clerkUserId, pts);
+          } catch (err) {
+            console.error("Webhook: failed to restore reserved points", session.id, err);
+          }
         }
       }
       break;
